@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-android-natnaelc-bc0288a2-0a46-43b3-b0b8-842ba312c28a",
+      "rules": "firestore.rules"
+    }
+  ]
+}

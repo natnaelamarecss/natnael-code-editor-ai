@@ -1,0 +1,88 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account settings and editor preferences",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "User identifier matching auth.uid" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "Display name" },
+        "photoUrl": { "type": "string", "description": "Profile picture URL" },
+        "defaultModel": { "type": "string", "description": "Preferred AI model tier" },
+        "editorTheme": { "type": "string", "description": "Editor color theme" },
+        "fontSize": { "type": "integer", "description": "Editor font size in sp" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp via FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "email", "createdAt"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "A coding project containing files and folders",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique project identifier" },
+        "userId": { "type": "string", "description": "Owner user identifier" },
+        "name": { "type": "string", "description": "Project title" },
+        "description": { "type": "string", "description": "Project description or summary" },
+        "template": { "type": "string", "description": "Template type (html, react, python, node, etc.)" },
+        "language": { "type": "string", "description": "Primary programming language" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp via FieldValue.serverTimestamp()" }
+      },
+      "required": ["id", "userId", "name", "template", "createdAt"]
+    },
+    "ProjectFile": {
+      "title": "ProjectFile",
+      "description": "A code file or directory within a project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique file identifier" },
+        "projectId": { "type": "string", "description": "Parent project ID" },
+        "userId": { "type": "string", "description": "Owner user identifier" },
+        "name": { "type": "string", "description": "File or directory name" },
+        "path": { "type": "string", "description": "Relative file path" },
+        "content": { "type": "string", "description": "Source code text content" },
+        "language": { "type": "string", "description": "File syntax language" },
+        "isFolder": { "type": "boolean", "description": "Whether this node is a folder" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp via FieldValue.serverTimestamp()" }
+      },
+      "required": ["id", "projectId", "userId", "name", "path", "content", "createdAt"]
+    },
+    "ChatSession": {
+      "title": "ChatSession",
+      "description": "An AI conversation thread",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique chat session identifier" },
+        "userId": { "type": "string", "description": "Owner user identifier" },
+        "title": { "type": "string", "description": "Chat topic title" },
+        "model": { "type": "string", "description": "Model used (NATNAEL LITE, THINKING, PRO)" },
+        "isPinned": { "type": "boolean", "description": "Whether chat is pinned" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp via FieldValue.serverTimestamp()" }
+      },
+      "required": ["id", "userId", "title", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores user preferences, settings, and profile info"
+    },
+    "/users/{userId}/projects/{projectId}": {
+      "schema": "Project",
+      "description": "User projects directory"
+    },
+    "/users/{userId}/projects/{projectId}/files/{fileId}": {
+      "schema": "ProjectFile",
+      "description": "Individual source files and directories within a user project"
+    },
+    "/users/{userId}/chats/{chatId}": {
+      "schema": "ChatSession",
+      "description": "User AI chat conversation sessions"
+    }
+  }
+}

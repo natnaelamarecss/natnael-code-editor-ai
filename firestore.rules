@@ -1,0 +1,157 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-\\.]+$');
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.email is string && data.email.size() <= 200 &&
+             (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 100)) &&
+             (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 1000)) &&
+             (!('defaultModel' in data) || data.defaultModel == null || (data.defaultModel is string && data.defaultModel.size() <= 50)) &&
+             (!('editorTheme' in data) || data.editorTheme == null || (data.editorTheme is string && data.editorTheme.size() <= 50)) &&
+             (!('fontSize' in data) || data.fontSize == null || (data.fontSize is int && data.fontSize >= 8 && data.fontSize <= 40)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidProject(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+             data.template is string && data.template.size() <= 50 &&
+             (!('description' in data) || data.description == null || (data.description is string && data.description.size() <= 2000)) &&
+             (!('language' in data) || data.language == null || (data.language is string && data.language.size() <= 50)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidProjectFile(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.projectId is string && data.projectId.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 255 &&
+             data.path is string && data.path.size() <= 1000 &&
+             data.content is string && data.content.size() <= 1048576 &&
+             (!('language' in data) || data.language == null || (data.language is string && data.language.size() <= 50)) &&
+             (!('isFolder' in data) || data.isFolder == null || data.isFolder is bool) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidChatSession(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             (!('model' in data) || data.model == null || (data.model is string && data.model.size() <= 50)) &&
+             (!('isPinned' in data) || data.isPinned == null || data.isPinned is bool) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    // User account and profile document
+    match /users/{userId} {
+      allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['userId', 'email', 'createdAt']) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidUserProfile(incoming());
+
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+
+      // User projects subcollection
+      match /projects/{projectId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['id', 'userId', 'name', 'template', 'createdAt']) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidProject(incoming());
+
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == existing().userId &&
+                         incoming().id == existing().id &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidProject(incoming());
+
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+
+        // Project files subcollection
+        match /files/{fileId} {
+          allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+          allow create: if isSignedIn() &&
+                           request.auth.uid == userId &&
+                           incoming().userId == request.auth.uid &&
+                           incoming().projectId == projectId &&
+                           incoming().keys().hasAll(['id', 'projectId', 'userId', 'name', 'path', 'content', 'createdAt']) &&
+                           incoming().createdAt is timestamp &&
+                           incoming().createdAt <= request.time &&
+                           isValidProjectFile(incoming());
+
+          allow update: if isSignedIn() &&
+                           request.auth.uid == userId &&
+                           incoming().userId == existing().userId &&
+                           incoming().id == existing().id &&
+                           incoming().projectId == existing().projectId &&
+                           incoming().createdAt == existing().createdAt &&
+                           isValidProjectFile(incoming());
+
+          allow delete: if isSignedIn() && request.auth.uid == userId;
+        }
+      }
+
+      // User chat sessions subcollection
+      match /chats/{chatId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['id', 'userId', 'title', 'createdAt']) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidChatSession(incoming());
+
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == existing().userId &&
+                         incoming().id == existing().id &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidChatSession(incoming());
+
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+  }
+}
